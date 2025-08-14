@@ -1,15 +1,21 @@
 async function baixarImagem() {
-  const url = document.getElementById('instaUrl').value;
-  if (!url) {
-    alert('Insira um link válido do Instagram');
+  const urlInput = document.getElementById('instaUrl');
+  const url = urlInput.value;
+  if (!url || !url.includes('instagram.com')) {
+    alert('Por favor, insira um link válido do Instagram.');
     return;
   }
 
   const resultado = document.getElementById('resultado');
-  resultado.innerHTML = 'Buscando imagem...';
+  const loader = document.getElementById('loader');
+
+  // Reset UI and show loader
+  resultado.innerHTML = '';
+  loader.style.display = 'block';
 
   try {
-    const response = await fetch('/getImageUrl', {
+    // Call the new backend endpoint
+    const response = await fetch('/getMedia', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
@@ -17,19 +23,55 @@ async function baixarImagem() {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Imagem não encontrada');
+      throw new Error(errorData.error || 'Não foi possível buscar a mídia.');
     }
 
-    const { imageUrl } = await response.json();
+    const { media } = await response.json();
 
-    resultado.innerHTML = `
-      <a href="${imageUrl}" target="_blank" download>Clique aqui para baixar a imagem em alta qualidade</a>
-      <br><br>
-      <img src="${imageUrl}" alt="Imagem do Instagram" style="max-width: 300px; margin-top: 10px;">
-    `;
+    if (!media || media.length === 0) {
+        throw new Error('Nenhuma mídia foi encontrada neste post.');
+    }
+
+    // Build the gallery from the media array
+    media.forEach(item => {
+      const mediaItemDiv = document.createElement('div');
+      mediaItemDiv.className = 'media-item';
+
+      if (item.type === 'image') {
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.alt = 'Imagem do Instagram';
+        mediaItemDiv.appendChild(img);
+      } else if (item.type === 'video') {
+        const video = document.createElement('video');
+        video.src = item.url;
+        video.setAttribute('playsinline', ''); // Good for mobile
+        video.setAttribute('loop', '');
+        // Mouse hover to play/pause
+        video.addEventListener('mouseover', () => video.play());
+        video.addEventListener('mouseout', () => video.pause());
+        mediaItemDiv.appendChild(video);
+      }
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = item.url;
+      downloadLink.className = 'download-link';
+      downloadLink.innerHTML = '<span>Baixar</span>'; // Use span for easier styling if needed
+      downloadLink.target = '_blank'; // Open in new tab
+
+      // To suggest a filename, we can try to extract it from the URL
+      const urlParts = item.url.split('?')[0].split('/');
+      downloadLink.download = urlParts[urlParts.length - 1];
+
+      mediaItemDiv.appendChild(downloadLink);
+      resultado.appendChild(mediaItemDiv);
+    });
+
   } catch (error) {
     console.error(error);
-    resultado.innerHTML = '';
     alert(`Erro: ${error.message}`);
+  } finally {
+    // Hide loader regardless of the outcome
+    loader.style.display = 'none';
   }
 }
