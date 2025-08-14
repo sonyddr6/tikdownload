@@ -1,0 +1,13 @@
+{
+  "name": "instagram-image-downloader",
+  "version": "1.0.0",
+  "description": "A simple app to download high-quality images from Instagram.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7"
+  }
+}
